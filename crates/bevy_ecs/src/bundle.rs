@@ -412,6 +412,9 @@ impl BundleInfo {
                         unsafe { sparse_sets.get_mut(component_id).debug_checked_unwrap() };
                     sparse_set.insert(entity, component_ptr, change_tick);
                 }
+                StorageType::Archetypal => {
+                    // All archetypal components are ZSTs and are not storred anywhere.
+                },
             }
             bundle_component += 1;
         });
@@ -434,6 +437,7 @@ impl BundleInfo {
         }
         let mut new_table_components = Vec::new();
         let mut new_sparse_set_components = Vec::new();
+        let mut new_archetypal_components: Vec<ComponentId> = Vec::new();
         let mut bundle_status = Vec::with_capacity(self.component_ids.len());
 
         let current_archetype = &mut archetypes[archetype_id];
@@ -447,6 +451,7 @@ impl BundleInfo {
                 match component_info.storage_type() {
                     StorageType::Table => new_table_components.push(component_id),
                     StorageType::SparseSet => new_sparse_set_components.push(component_id),
+                    StorageType::Archetypal => new_archetypal_components.push(component_id),
                 }
             }
         }

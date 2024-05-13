@@ -923,7 +923,7 @@ unsafe impl<T: ReferenceableComponent> WorldQuery for &T {
     const IS_DENSE: bool = {
         match T::STORAGE_TYPE {
             StorageType::Table => true,
-            StorageType::SparseSet => false,
+            StorageType::SparseSet | StorageType::Archetypal => false,
         }
     };
 
@@ -978,6 +978,9 @@ unsafe impl<T: ReferenceableComponent> WorldQuery for &T {
                 let item = unsafe { sparse_set.get(entity).debug_checked_unwrap() };
                 item.deref()
             }
+            StorageType::Archetypal => {
+                unreachable!()
+            },
         }
     }
 
@@ -1083,7 +1086,7 @@ unsafe impl<'__w, T: ReferenceableComponent + ChangeTrackingComponent> WorldQuer
     const IS_DENSE: bool = {
         match T::STORAGE_TYPE {
             StorageType::Table => true,
-            StorageType::SparseSet => false,
+            StorageType::SparseSet | StorageType::Archetypal => false,
         }
     };
 
@@ -1161,6 +1164,9 @@ unsafe impl<'__w, T: ReferenceableComponent + ChangeTrackingComponent> WorldQuer
                     ticks: Ticks::from_tick_cells(ticks, fetch.last_run, fetch.this_run),
                 }
             }
+            StorageType::Archetypal => {
+                unreachable!()
+            },
         }
     }
 
@@ -1269,7 +1275,7 @@ unsafe impl<'__w, T: ReferenceableComponent + ChangeTrackingComponent> WorldQuer
     const IS_DENSE: bool = {
         match T::STORAGE_TYPE {
             StorageType::Table => true,
-            StorageType::SparseSet => false,
+            StorageType::SparseSet | StorageType::Archetypal => false,
         }
     };
 
@@ -1346,6 +1352,9 @@ unsafe impl<'__w, T: ReferenceableComponent + ChangeTrackingComponent> WorldQuer
                     value: component.assert_unique().deref_mut(),
                     ticks: TicksMut::from_tick_cells(ticks, fetch.last_run, fetch.this_run),
                 }
+            }
+            StorageType::Archetypal => {
+                unreachable!()
             }
         }
     }
@@ -1601,7 +1610,7 @@ unsafe impl<T: Component> WorldQuery for Has<T> {
     const IS_DENSE: bool = {
         match T::STORAGE_TYPE {
             StorageType::Table => true,
-            StorageType::SparseSet => false,
+            StorageType::SparseSet | StorageType::Archetypal => false,
         }
     };
 

@@ -150,7 +150,7 @@ unsafe impl<T: Component> WorldQuery for With<T> {
     const IS_DENSE: bool = {
         match T::STORAGE_TYPE {
             StorageType::Table => true,
-            StorageType::SparseSet => false,
+            StorageType::SparseSet | StorageType::Archetypal => false,
         }
     };
 
@@ -258,7 +258,7 @@ unsafe impl<T: Component> WorldQuery for Without<T> {
     const IS_DENSE: bool = {
         match T::STORAGE_TYPE {
             StorageType::Table => true,
-            StorageType::SparseSet => false,
+            StorageType::SparseSet | StorageType::Archetypal => false,
         }
     };
 
@@ -620,7 +620,7 @@ unsafe impl<T: ChangeTrackingComponent> WorldQuery for Added<T> {
     const IS_DENSE: bool = {
         match T::STORAGE_TYPE {
             StorageType::Table => true,
-            StorageType::SparseSet => false,
+            StorageType::SparseSet | StorageType::Archetypal => false,
         }
     };
 
@@ -675,6 +675,9 @@ unsafe impl<T: ChangeTrackingComponent> WorldQuery for Added<T> {
                 };
 
                 tick.deref().is_newer_than(fetch.last_run, fetch.this_run)
+            }
+            StorageType::Archetypal => {
+                false
             }
         }
     }
@@ -829,7 +832,7 @@ unsafe impl<T: ChangeTrackingComponent> WorldQuery for Changed<T> {
     const IS_DENSE: bool = {
         match T::STORAGE_TYPE {
             StorageType::Table => true,
-            StorageType::SparseSet => false,
+            StorageType::SparseSet | StorageType::Archetypal => false,
         }
     };
 
@@ -885,6 +888,9 @@ unsafe impl<T: ChangeTrackingComponent> WorldQuery for Changed<T> {
 
                 tick.deref().is_newer_than(fetch.last_run, fetch.this_run)
             }
+            StorageType::Archetypal => {
+                false
+            },
         }
     }
 

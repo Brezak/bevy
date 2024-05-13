@@ -191,18 +191,21 @@ pub enum StorageType {
     Table,
     /// Provides fast addition and removal of components, but slower iteration.
     SparseSet,
+    Archetypal,
 }
 
 impl StorageType {
     pub const fn is_referenceable(&self) -> bool {
         match self {
             StorageType::Table | StorageType::SparseSet => true,
+            StorageType::Archetypal => false,
         }
     }
 
     pub const fn tracks_changes(&self) -> bool {
         match self {
             StorageType::Table | StorageType::SparseSet => true,
+            StorageType::Archetypal => false,
         }
     }
 }

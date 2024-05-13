@@ -1,8 +1,8 @@
 use crate::{
     archetype::{Archetype, ArchetypeId, Archetypes}, bundle::{Bundle, BundleId, BundleInfo, BundleInserter, DynamicBundle}, change_detection::MutUntyped, component::{Component, ComponentId, ComponentTicks, Components, StorageType}, entity::{Entities, Entity, EntityLocation}, prelude::{ChangeTrackingComponent, ReferenceableComponent}, query::{Access, DebugCheckedUnwrap}, removal_detection::RemovedComponentEvents, storage::Storages, world::{Mut, World}
 };
-use bevy_ptr::{OwningPtr, Ptr};
-use std::{any::TypeId, marker::PhantomData};
+use bevy_ptr::{dangling_with_align, OwningPtr, Ptr};
+use std::{any::TypeId, marker::PhantomData, num::NonZeroUsize};
 use thiserror::Error;
 
 use super::{unsafe_world_cell::UnsafeEntityCell, Ref};
@@ -2300,6 +2300,7 @@ unsafe fn remove_bundle_from_archetype(
             let current_archetype = &mut archetypes[archetype_id];
             let mut removed_table_components = Vec::new();
             let mut removed_sparse_set_components = Vec::new();
+            let mut removed_archetypal_components = Vec::new();
             for component_id in bundle_info.components().iter().cloned() {
                 if current_archetype.contains(component_id) {
                     // SAFETY: bundle components were already initialized by bundles.get_info
@@ -2307,6 +2308,7 @@ unsafe fn remove_bundle_from_archetype(
                     match component_info.storage_type() {
                         StorageType::Table => removed_table_components.push(component_id),
                         StorageType::SparseSet => removed_sparse_set_components.push(component_id),
+                        StorageType::Archetypal => removed_archetypal_components.push(component_id),
                     }
                 } else if !intersection {
                     // a component in the bundle was not present in the entity's archetype, so this
@@ -2423,6 +2425,18 @@ pub(crate) unsafe fn take_component<'a>(
             .unwrap()
             .remove_and_forget(entity)
             .unwrap(),
+        StorageType::Archetypal => {
+            let info = components.get_info(component_id).debug_checked_unwrap();
+            debug_assert_eq!(info.storage_type(), StorageType::Archetypal, "`storage_type` did note accurately reflect where `component_id` was stored");
+            let layout = info.layout();
+            debug_assert_eq!(layout.size(), 0, "Archetypal components must be zero sized");
+
+            // SAFETY: A zero align value would be UB
+            let pointer = dangling_with_align(NonZeroUsize::new(layout.align()).debug_checked_unwrap());
+
+            // SAFETY: Aligned pointers to zero sized types are safe to dereference
+            OwningPtr::new(pointer)
+        }
     }
 }
 

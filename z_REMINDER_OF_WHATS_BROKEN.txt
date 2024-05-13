@@ -1,0 +1,7 @@
+The problem with archetype level only components is that we never store the ticks they were changed or added to the world.
+This wouldn't be an issue normally since the user could just weigh the memory and cpu time savings against loosing change detection,
+but the `WorldQuery` implementation for `&mut T` returns a `Mut<T>` which holds references to the tick information for a given component (the tick it was added and last changed).
+Since archetype level components don't actually get their own storage (you could say the archetype is their storage format) we don't store this tick information.
+If we stored the tick info we'd be loosing the only advantage archetype only components have over ZST marker components stored in tables.
+
+Before 

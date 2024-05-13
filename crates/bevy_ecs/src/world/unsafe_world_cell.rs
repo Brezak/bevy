@@ -10,12 +10,20 @@ use crate::{
     component::{ComponentId, ComponentTicks, Components, StorageType, Tick, TickCells},
     entity::{Entities, Entity, EntityLocation},
     prelude::{ChangeTrackingComponent, Component, ReferenceableComponent},
+    query::DebugCheckedUnwrap,
     removal_detection::RemovedComponentEvents,
     storage::{Column, ComponentSparseSet, Storages},
     system::{Res, Resource},
 };
-use bevy_ptr::Ptr;
-use std::{any::TypeId, cell::UnsafeCell, fmt::Debug, marker::PhantomData, ptr, ptr::addr_of_mut};
+use bevy_ptr::{dangling_with_align, Ptr};
+use std::{
+    any::TypeId,
+    cell::UnsafeCell,
+    fmt::Debug,
+    marker::PhantomData,
+    num::NonZeroUsize,
+    ptr::{self, addr_of_mut},
+};
 
 /// Variant of the [`World`] where resource and component accesses take `&self`, and the responsibility to avoid
 /// aliasing violations are given to the caller instead of being checked at compile-time by rust's unique XOR shared rule.
@@ -937,6 +945,23 @@ unsafe fn get_component(
             Some(components.get_data_unchecked(location.table_row))
         }
         StorageType::SparseSet => world.fetch_sparse_set(component_id)?.get(entity),
+        StorageType::Archetypal => {
+            let info = world.components().get_info(component_id)?;
+            debug_assert_eq!(
+                info.storage_type(),
+                StorageType::Archetypal,
+                "`storage_type` did note accurately reflect where `component_id` was stored"
+            );
+            let layout = info.layout();
+            debug_assert_eq!(layout.size(), 0, "Archetypal components must be zero sized");
+
+            // SAFETY: A zero align value would be UB
+            let pointer =
+                dangling_with_align(NonZeroUsize::new(layout.align()).debug_checked_unwrap());
+
+            // SAFETY: Aligned pointers to zero sized types are safe to dereference
+            Some(Ptr::new(pointer))
+        }
     }
 }
 
@@ -970,6 +995,7 @@ unsafe fn get_component_and_ticks(
             ))
         }
         StorageType::SparseSet => world.fetch_sparse_set(component_id)?.get_with_ticks(entity),
+        StorageType::Archetypal => None,
     }
 }
 
@@ -997,5 +1023,6 @@ unsafe fn get_ticks(
             Some(components.get_ticks_unchecked(location.table_row))
         }
         StorageType::SparseSet => world.fetch_sparse_set(component_id)?.get_ticks(entity),
+        StorageType::Archetypal => None,
     }
 }
