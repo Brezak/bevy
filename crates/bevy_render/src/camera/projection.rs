@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 pub struct CameraProjectionPlugin<T: CameraProjection + Component + GetTypeRegistration>(
     PhantomData<T>,
 );
-impl<T: CameraProjection + Component + GetTypeRegistration> Plugin for CameraProjectionPlugin<T> {
+impl<T: CameraProjection + Component + ReferenceableComponent + ChangeTrackingComponent + GetTypeRegistration> Plugin for CameraProjectionPlugin<T> {
     fn build(&self, app: &mut App) {
         app.register_type::<T>()
             .add_systems(

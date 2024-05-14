@@ -5,9 +5,7 @@ use crate::{
 };
 use bevy_app::{App, Plugin};
 use bevy_ecs::{
-    prelude::{Component, Entity},
-    schedule::IntoSystemConfigs,
-    system::{Commands, Query, Res, ResMut},
+    component::ReferenceableComponent, prelude::{Component, Entity}, schedule::IntoSystemConfigs, system::{Commands, Query, Res, ResMut}
 };
 use std::marker::PhantomData;
 
@@ -15,7 +13,7 @@ use std::marker::PhantomData;
 /// by storing them in a [`GpuArrayBuffer`].
 pub struct GpuComponentArrayBufferPlugin<C: Component + GpuArrayBufferable>(PhantomData<C>);
 
-impl<C: Component + GpuArrayBufferable> Plugin for GpuComponentArrayBufferPlugin<C> {
+impl<C: ReferenceableComponent + GpuArrayBufferable> Plugin for GpuComponentArrayBufferPlugin<C> {
     fn build(&self, app: &mut App) {
         if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app.add_systems(
@@ -40,7 +38,7 @@ impl<C: Component + GpuArrayBufferable> Default for GpuComponentArrayBufferPlugi
     }
 }
 
-fn prepare_gpu_component_array_buffers<C: Component + GpuArrayBufferable>(
+fn prepare_gpu_component_array_buffers<C: ReferenceableComponent + GpuArrayBufferable>(
     mut commands: Commands,
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,

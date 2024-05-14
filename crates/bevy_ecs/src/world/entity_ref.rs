@@ -1,13 +1,5 @@
 use crate::{
-    archetype::{Archetype, ArchetypeId, Archetypes},
-    bundle::{Bundle, BundleId, BundleInfo, BundleInserter, DynamicBundle},
-    change_detection::MutUntyped,
-    component::{Component, ComponentId, ComponentTicks, Components, StorageType},
-    entity::{Entities, Entity, EntityLocation},
-    query::{Access, DebugCheckedUnwrap},
-    removal_detection::RemovedComponentEvents,
-    storage::Storages,
-    world::{Mut, World},
+    archetype::{Archetype, ArchetypeId, Archetypes}, bundle::{Bundle, BundleId, BundleInfo, BundleInserter, DynamicBundle}, change_detection::MutUntyped, component::{Component, ComponentId, ComponentTicks, Components, StorageType}, entity::{Entities, Entity, EntityLocation}, prelude::{ChangeTrackingComponent, ReferenceableComponent}, query::{Access, DebugCheckedUnwrap}, removal_detection::RemovedComponentEvents, storage::Storages, world::{Mut, World}
 };
 use bevy_ptr::{OwningPtr, Ptr};
 use std::{any::TypeId, marker::PhantomData};
@@ -105,7 +97,7 @@ impl<'w> EntityRef<'w> {
     /// Gets access to the component of type `T` for the current entity.
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn get<T: Component>(&self) -> Option<&'w T> {
+    pub fn get<T: ReferenceableComponent>(&self) -> Option<&'w T> {
         // SAFETY: We have read-only access to all components of this entity.
         unsafe { self.0.get::<T>() }
     }
@@ -115,7 +107,7 @@ impl<'w> EntityRef<'w> {
     ///
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn get_ref<T: Component>(&self) -> Option<Ref<'w, T>> {
+    pub fn get_ref<T: ReferenceableComponent + ChangeTrackingComponent>(&self) -> Option<Ref<'w, T>> {
         // SAFETY: We have read-only access to all components of this entity.
         unsafe { self.0.get_ref::<T>() }
     }
@@ -123,7 +115,7 @@ impl<'w> EntityRef<'w> {
     /// Retrieves the change ticks for the given component. This can be useful for implementing change
     /// detection in custom runtimes.
     #[inline]
-    pub fn get_change_ticks<T: Component>(&self) -> Option<ComponentTicks> {
+    pub fn get_change_ticks<T: ChangeTrackingComponent>(&self) -> Option<ComponentTicks> {
         // SAFETY: We have read-only access to all components of this entity.
         unsafe { self.0.get_change_ticks::<T>() }
     }
@@ -344,7 +336,7 @@ impl<'w> EntityMut<'w> {
     /// Gets access to the component of type `T` for the current entity.
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn get<T: Component>(&self) -> Option<&'_ T> {
+    pub fn get<T: ReferenceableComponent>(&self) -> Option<&'_ T> {
         self.as_readonly().get()
     }
 
@@ -353,7 +345,7 @@ impl<'w> EntityMut<'w> {
     ///
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn into_borrow<T: Component>(self) -> Option<&'w T> {
+    pub fn into_borrow<T: ReferenceableComponent>(self) -> Option<&'w T> {
         // SAFETY: consuming `self` implies exclusive access
         unsafe { self.0.get() }
     }
@@ -363,7 +355,7 @@ impl<'w> EntityMut<'w> {
     ///
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn get_ref<T: Component>(&self) -> Option<Ref<'_, T>> {
+    pub fn get_ref<T: ReferenceableComponent + ChangeTrackingComponent>(&self) -> Option<Ref<'_, T>> {
         self.as_readonly().get_ref()
     }
 
@@ -373,7 +365,7 @@ impl<'w> EntityMut<'w> {
     ///
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn into_ref<T: Component>(self) -> Option<Ref<'w, T>> {
+    pub fn into_ref<T: ReferenceableComponent + ChangeTrackingComponent>(self) -> Option<Ref<'w, T>> {
         // SAFETY: consuming `self` implies exclusive access
         unsafe { self.0.get_ref() }
     }
@@ -381,7 +373,7 @@ impl<'w> EntityMut<'w> {
     /// Gets mutable access to the component of type `T` for the current entity.
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn get_mut<T: Component>(&mut self) -> Option<Mut<'_, T>> {
+    pub fn get_mut<T: ReferenceableComponent + ChangeTrackingComponent>(&mut self) -> Option<Mut<'_, T>> {
         // SAFETY: &mut self implies exclusive access for duration of returned value
         unsafe { self.0.get_mut() }
     }
@@ -390,7 +382,7 @@ impl<'w> EntityMut<'w> {
     /// with the world `'w` lifetime for the current entity.
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn into_mut<T: Component>(self) -> Option<Mut<'w, T>> {
+    pub fn into_mut<T: ReferenceableComponent + ChangeTrackingComponent>(self) -> Option<Mut<'w, T>> {
         // SAFETY: consuming `self` implies exclusive access
         unsafe { self.0.get_mut() }
     }
@@ -398,7 +390,7 @@ impl<'w> EntityMut<'w> {
     /// Retrieves the change ticks for the given component. This can be useful for implementing change
     /// detection in custom runtimes.
     #[inline]
-    pub fn get_change_ticks<T: Component>(&self) -> Option<ComponentTicks> {
+    pub fn get_change_ticks<T: ChangeTrackingComponent>(&self) -> Option<ComponentTicks> {
         self.as_readonly().get_change_ticks::<T>()
     }
 
@@ -641,7 +633,7 @@ impl<'w> EntityWorldMut<'w> {
     /// Gets access to the component of type `T` for the current entity.
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn get<T: Component>(&self) -> Option<&'_ T> {
+    pub fn get<T: ReferenceableComponent>(&self) -> Option<&'_ T> {
         EntityRef::from(self).get()
     }
 
@@ -649,7 +641,7 @@ impl<'w> EntityWorldMut<'w> {
     /// the world `'w` lifetime for the current entity.
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn into_borrow<T: Component>(self) -> Option<&'w T> {
+    pub fn into_borrow<T: ReferenceableComponent>(self) -> Option<&'w T> {
         // SAFETY: consuming `self` implies exclusive access
         unsafe { self.into_unsafe_entity_cell().get() }
     }
@@ -659,7 +651,7 @@ impl<'w> EntityWorldMut<'w> {
     ///
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn get_ref<T: Component>(&self) -> Option<Ref<'_, T>> {
+    pub fn get_ref<T: ReferenceableComponent + ChangeTrackingComponent>(&self) -> Option<Ref<'_, T>> {
         EntityRef::from(self).get_ref()
     }
 
@@ -669,14 +661,14 @@ impl<'w> EntityWorldMut<'w> {
     ///
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn into_ref<T: Component>(self) -> Option<Ref<'w, T>> {
+    pub fn into_ref<T: ReferenceableComponent + ChangeTrackingComponent>(self) -> Option<Ref<'w, T>> {
         EntityRef::from(self).get_ref()
     }
 
     /// Gets mutable access to the component of type `T` for the current entity.
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn get_mut<T: Component>(&mut self) -> Option<Mut<'_, T>> {
+    pub fn get_mut<T: ReferenceableComponent + ChangeTrackingComponent>(&mut self) -> Option<Mut<'_, T>> {
         // SAFETY: &mut self implies exclusive access for duration of returned value
         unsafe { self.as_unsafe_entity_cell().get_mut() }
     }
@@ -685,7 +677,7 @@ impl<'w> EntityWorldMut<'w> {
     /// with the world `'w` lifetime for the current entity.
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn into_mut<T: Component>(self) -> Option<Mut<'w, T>> {
+    pub fn into_mut<T: ReferenceableComponent + ChangeTrackingComponent>(self) -> Option<Mut<'w, T>> {
         // SAFETY: consuming `self` implies exclusive access
         unsafe { self.into_unsafe_entity_cell().get_mut() }
     }
@@ -693,7 +685,7 @@ impl<'w> EntityWorldMut<'w> {
     /// Retrieves the change ticks for the given component. This can be useful for implementing change
     /// detection in custom runtimes.
     #[inline]
-    pub fn get_change_ticks<T: Component>(&self) -> Option<ComponentTicks> {
+    pub fn get_change_ticks<T: ChangeTrackingComponent>(&self) -> Option<ComponentTicks> {
         EntityRef::from(self).get_change_ticks::<T>()
     }
 
@@ -1368,7 +1360,7 @@ impl<'w> EntityWorldMut<'w> {
     /// assert_eq!(world.query::<&Comp>().single(&world).0, 5);
     ///
     /// ```
-    pub fn entry<'a, T: Component>(&'a mut self) -> Entry<'w, 'a, T> {
+    pub fn entry<'a, T: ReferenceableComponent>(&'a mut self) -> Entry<'w, 'a, T> {
         if self.contains::<T>() {
             Entry::Occupied(OccupiedEntry {
                 entity_world: self,
@@ -1388,14 +1380,14 @@ impl<'w> EntityWorldMut<'w> {
 /// This `enum` can only be constructed from the [`entry`] method on [`EntityWorldMut`].
 ///
 /// [`entry`]: EntityWorldMut::entry
-pub enum Entry<'w, 'a, T: Component> {
+pub enum Entry<'w, 'a, T: ReferenceableComponent> {
     /// An occupied entry.
     Occupied(OccupiedEntry<'w, 'a, T>),
     /// A vacant entry.
     Vacant(VacantEntry<'w, 'a, T>),
 }
 
-impl<'w, 'a, T: Component> Entry<'w, 'a, T> {
+impl<'w, 'a, T: ReferenceableComponent> Entry<'w, 'a, T> {
     /// Provides in-place mutable access to an occupied entry.
     ///
     /// # Examples
@@ -1412,7 +1404,10 @@ impl<'w, 'a, T: Component> Entry<'w, 'a, T> {
     /// assert_eq!(world.query::<&Comp>().single(&world).0, 1);
     /// ```
     #[inline]
-    pub fn and_modify<F: FnOnce(Mut<'_, T>)>(self, f: F) -> Self {
+    pub fn and_modify<F: FnOnce(Mut<'_, T>)>(self, f: F) -> Self
+    where
+        T: ChangeTrackingComponent
+    {
         match self {
             Entry::Occupied(mut entry) => {
                 f(entry.get_mut());
@@ -1473,7 +1468,10 @@ impl<'w, 'a, T: Component> Entry<'w, 'a, T> {
     /// assert_eq!(world.query::<&Comp>().single(&world).0, 8);
     /// ```
     #[inline]
-    pub fn or_insert(self, default: T) -> Mut<'a, T> {
+    pub fn or_insert(self, default: T) -> Mut<'a, T>
+    where
+        T: ChangeTrackingComponent
+    {
         match self {
             Entry::Occupied(entry) => entry.into_mut(),
             Entry::Vacant(entry) => entry.insert(default),
@@ -1497,7 +1495,10 @@ impl<'w, 'a, T: Component> Entry<'w, 'a, T> {
     /// assert_eq!(world.query::<&Comp>().single(&world).0, 4);
     /// ```
     #[inline]
-    pub fn or_insert_with<F: FnOnce() -> T>(self, default: F) -> Mut<'a, T> {
+    pub fn or_insert_with<F: FnOnce() -> T>(self, default: F) -> Mut<'a, T>
+    where
+        T: ChangeTrackingComponent
+    {
         match self {
             Entry::Occupied(entry) => entry.into_mut(),
             Entry::Vacant(entry) => entry.insert(default()),
@@ -1505,7 +1506,7 @@ impl<'w, 'a, T: Component> Entry<'w, 'a, T> {
     }
 }
 
-impl<'w, 'a, T: Component + Default> Entry<'w, 'a, T> {
+impl<'w, 'a, T: ReferenceableComponent + Default> Entry<'w, 'a, T> {
     /// Ensures the entry has this component by inserting the default value if empty, and
     /// returns a mutable reference to this component in the entry.
     ///
@@ -1523,7 +1524,10 @@ impl<'w, 'a, T: Component + Default> Entry<'w, 'a, T> {
     /// assert_eq!(world.query::<&Comp>().single(&world).0, 0);
     /// ```
     #[inline]
-    pub fn or_default(self) -> Mut<'a, T> {
+    pub fn or_default(self) -> Mut<'a, T>
+    where
+        T: ChangeTrackingComponent
+    {
         match self {
             Entry::Occupied(entry) => entry.into_mut(),
             Entry::Vacant(entry) => entry.insert(Default::default()),
@@ -1534,12 +1538,12 @@ impl<'w, 'a, T: Component + Default> Entry<'w, 'a, T> {
 /// A view into an occupied entry in a [`EntityWorldMut`]. It is part of the [`Entry`] enum.
 ///
 /// The contained entity must have the component type parameter if we have this struct.
-pub struct OccupiedEntry<'w, 'a, T: Component> {
+pub struct OccupiedEntry<'w, 'a, T: ReferenceableComponent> {
     entity_world: &'a mut EntityWorldMut<'w>,
     _marker: PhantomData<T>,
 }
 
-impl<'w, 'a, T: Component> OccupiedEntry<'w, 'a, T> {
+impl<'w, 'a, T: ReferenceableComponent> OccupiedEntry<'w, 'a, T> {
     /// Gets a reference to the component in the entry.
     ///
     /// # Examples
@@ -1590,7 +1594,10 @@ impl<'w, 'a, T: Component> OccupiedEntry<'w, 'a, T> {
     /// assert_eq!(world.query::<&Comp>().single(&world).0, 17);
     /// ```
     #[inline]
-    pub fn get_mut(&mut self) -> Mut<'_, T> {
+    pub fn get_mut(&mut self) -> Mut<'_, T>
+    where
+        T: ChangeTrackingComponent
+    {
         // This shouldn't panic because if we have an OccupiedEntry the component must exist.
         self.entity_world.get_mut::<T>().unwrap()
     }
@@ -1619,7 +1626,10 @@ impl<'w, 'a, T: Component> OccupiedEntry<'w, 'a, T> {
     /// assert_eq!(world.query::<&Comp>().single(&world).0, 15);
     /// ```
     #[inline]
-    pub fn into_mut(self) -> Mut<'a, T> {
+    pub fn into_mut(self) -> Mut<'a, T>
+    where
+        T: ChangeTrackingComponent
+    {
         // This shouldn't panic because if we have an OccupiedEntry the component must exist.
         self.entity_world.get_mut().unwrap()
     }
@@ -1678,7 +1688,7 @@ pub struct VacantEntry<'w, 'a, T: Component> {
     _marker: PhantomData<T>,
 }
 
-impl<'w, 'a, T: Component> VacantEntry<'w, 'a, T> {
+impl<'w, 'a, T: ReferenceableComponent> VacantEntry<'w, 'a, T> {
     /// Inserts the component into the `VacantEntry` and returns a mutable reference to it.
     ///
     /// # Examples
@@ -1698,7 +1708,10 @@ impl<'w, 'a, T: Component> VacantEntry<'w, 'a, T> {
     /// assert_eq!(world.query::<&Comp>().single(&world).0, 10);
     /// ```
     #[inline]
-    pub fn insert(self, component: T) -> Mut<'a, T> {
+    pub fn insert(self, component: T) -> Mut<'a, T>
+    where
+        T: ChangeTrackingComponent
+    {
         self.entity_world.insert(component);
         // This shouldn't panic because we just added this component
         self.entity_world.get_mut::<T>().unwrap()
@@ -1745,6 +1758,7 @@ impl<'w> FilteredEntityRef<'w> {
     /// - If `access` takes read access to a component no mutable reference to that
     /// component can exist at the same time as the returned [`FilteredEntityMut`]
     /// - If `access` takes any access for a component `entity` must have that component.
+    /// - If `access` takes any access for a component said component must be a [`ReferenceableComponent`]
     pub(crate) unsafe fn new(entity: UnsafeEntityCell<'w>, access: Access<ComponentId>) -> Self {
         Self { entity, access }
     }
@@ -1820,7 +1834,7 @@ impl<'w> FilteredEntityRef<'w> {
     /// Gets access to the component of type `T` for the current entity.
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn get<T: Component>(&self) -> Option<&'w T> {
+    pub fn get<T: ReferenceableComponent>(&self) -> Option<&'w T> {
         let id = self.entity.world().components().get_id(TypeId::of::<T>())?;
         self.access
             .has_read(id)
@@ -1833,7 +1847,7 @@ impl<'w> FilteredEntityRef<'w> {
     ///
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn get_ref<T: Component>(&self) -> Option<Ref<'w, T>> {
+    pub fn get_ref<T: ReferenceableComponent>(&self) -> Option<Ref<'w, T>> {
         let id = self.entity.world().components().get_id(TypeId::of::<T>())?;
         self.access
             .has_read(id)
@@ -1844,7 +1858,7 @@ impl<'w> FilteredEntityRef<'w> {
     /// Retrieves the change ticks for the given component. This can be useful for implementing change
     /// detection in custom runtimes.
     #[inline]
-    pub fn get_change_ticks<T: Component>(&self) -> Option<ComponentTicks> {
+    pub fn get_change_ticks<T: ChangeTrackingComponent>(&self) -> Option<ComponentTicks> {
         let id = self.entity.world().components().get_id(TypeId::of::<T>())?;
         self.access
             .has_read(id)
@@ -2074,7 +2088,7 @@ impl<'w> FilteredEntityMut<'w> {
     /// Gets access to the component of type `T` for the current entity.
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn get<T: Component>(&self) -> Option<&'_ T> {
+    pub fn get<T: ReferenceableComponent>(&self) -> Option<&'_ T> {
         self.as_readonly().get()
     }
 
@@ -2083,14 +2097,14 @@ impl<'w> FilteredEntityMut<'w> {
     ///
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn get_ref<T: Component>(&self) -> Option<Ref<'_, T>> {
+    pub fn get_ref<T: ReferenceableComponent>(&self) -> Option<Ref<'_, T>> {
         self.as_readonly().get_ref()
     }
 
     /// Gets mutable access to the component of type `T` for the current entity.
     /// Returns `None` if the entity does not have a component of type `T`.
     #[inline]
-    pub fn get_mut<T: Component>(&mut self) -> Option<Mut<'_, T>> {
+    pub fn get_mut<T: ReferenceableComponent>(&mut self) -> Option<Mut<'_, T>> {
         let id = self.entity.world().components().get_id(TypeId::of::<T>())?;
         self.access
             .has_write(id)
@@ -2101,7 +2115,7 @@ impl<'w> FilteredEntityMut<'w> {
     /// Retrieves the change ticks for the given component. This can be useful for implementing change
     /// detection in custom runtimes.
     #[inline]
-    pub fn get_change_ticks<T: Component>(&self) -> Option<ComponentTicks> {
+    pub fn get_change_ticks<T: ReferenceableComponent + ChangeTrackingComponent>(&self) -> Option<ComponentTicks> {
         self.as_readonly().get_change_ticks::<T>()
     }
 
@@ -2139,6 +2153,7 @@ impl<'w> FilteredEntityMut<'w> {
     /// which is only valid while the [`FilteredEntityMut`] is alive.
     #[inline]
     pub fn get_mut_by_id(&mut self, component_id: ComponentId) -> Option<MutUntyped<'_>> {
+        // BEFORE_PR: Fuck!
         // SAFETY: We have write access so we must have the component
         self.access.has_write(component_id).then(|| unsafe {
             self.entity

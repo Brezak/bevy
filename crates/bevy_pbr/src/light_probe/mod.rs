@@ -5,7 +5,7 @@ use bevy_asset::{load_internal_asset, AssetId, Handle};
 use bevy_core_pipeline::core_3d::Camera3d;
 use bevy_derive::{Deref, DerefMut};
 use bevy_ecs::{
-    component::Component,
+    component::{Component, ReferenceableComponent},
     entity::Entity,
     query::With,
     reflect::ReflectComponent,
@@ -250,7 +250,7 @@ where
 /// Most light probe systems are written to be generic over the type of light
 /// probe. This allows much of the code to be shared and enables easy addition
 /// of more light probe types (e.g. real-time reflection planes) in the future.
-pub trait LightProbeComponent: Send + Sync + Component + Sized {
+pub trait LightProbeComponent: Send + Sync + ReferenceableComponent + Sized {
     /// Holds [`AssetId`]s of the texture or textures that this light probe
     /// references.
     ///

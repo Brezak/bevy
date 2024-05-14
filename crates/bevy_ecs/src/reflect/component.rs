@@ -59,10 +59,7 @@
 
 use super::from_reflect_with_fallback;
 use crate::{
-    change_detection::Mut,
-    component::Component,
-    entity::Entity,
-    world::{unsafe_world_cell::UnsafeEntityCell, EntityMut, EntityRef, EntityWorldMut, World},
+    change_detection::Mut, entity::Entity, prelude::{ChangeTrackingComponent, ReferenceableComponent}, world::{unsafe_world_cell::UnsafeEntityCell, EntityMut, EntityRef, EntityWorldMut, World}
 };
 use bevy_reflect::{FromReflect, FromType, Reflect, TypeRegistry};
 
@@ -124,7 +121,7 @@ impl ReflectComponentFns {
     ///
     /// This is useful if you want to start with the default implementation before overriding some
     /// of the functions to create a custom implementation.
-    pub fn new<T: Component + Reflect + FromReflect>() -> Self {
+    pub fn new<T: ReferenceableComponent + ChangeTrackingComponent + Reflect + FromReflect>() -> Self {
         <ReflectComponent as FromType<T>>::from_type().0
     }
 }
@@ -253,7 +250,7 @@ impl ReflectComponent {
     }
 }
 
-impl<C: Component + Reflect> FromType<C> for ReflectComponent {
+impl<C: ReferenceableComponent + ChangeTrackingComponent + Reflect> FromType<C> for ReflectComponent {
     fn from_type() -> Self {
         ReflectComponent(ReflectComponentFns {
             insert: |entity, reflected_component, registry| {

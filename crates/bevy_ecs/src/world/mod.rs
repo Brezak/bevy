@@ -8,6 +8,7 @@ mod spawn_batch;
 pub mod unsafe_world_cell;
 
 pub use crate::change_detection::{Mut, Ref, CHECK_TICK_THRESHOLD};
+use crate::prelude::{ChangeTrackingComponent, ReferenceableComponent};
 pub use crate::world::command_queue::CommandQueue;
 pub use deferred_world::DeferredWorld;
 pub use entity_ref::{
@@ -875,7 +876,7 @@ impl World {
     /// assert_eq!(position.x, 0.0);
     /// ```
     #[inline]
-    pub fn get<T: Component>(&self, entity: Entity) -> Option<&T> {
+    pub fn get<T: ReferenceableComponent>(&self, entity: Entity) -> Option<&T> {
         self.get_entity(entity)?.get()
     }
 
@@ -896,7 +897,7 @@ impl World {
     /// position.x = 1.0;
     /// ```
     #[inline]
-    pub fn get_mut<T: Component>(&mut self, entity: Entity) -> Option<Mut<T>> {
+    pub fn get_mut<T: ReferenceableComponent + ChangeTrackingComponent>(&mut self, entity: Entity) -> Option<Mut<T>> {
         // SAFETY:
         // - `as_unsafe_world_cell` is the only thing that is borrowing world
         // - `as_unsafe_world_cell` provides mutable permission to everything

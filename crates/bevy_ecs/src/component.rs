@@ -158,6 +158,20 @@ pub trait Component: Send + Sync + 'static {
     fn register_component_hooks(_hooks: &mut ComponentHooks) {}
 }
 
+/// Marker trait for components that are stored somewhere in the [`World`] and references to them can be queried.
+/// 
+/// This trait will be automatically implemented for components 
+/// 
+/// # Safety
+/// The storage used by this component must actually store the component.
+pub unsafe trait ReferenceableComponent: Component {}
+
+/// Marker trait for components for which changes are stored somewhere in the [`World`] and changes to them can be queried.
+/// 
+/// # Safety
+/// The storage used by this component must store change information for the component.
+pub unsafe trait ChangeTrackingComponent: Component {}
+
 /// The storage used for a specific component type.
 ///
 /// # Examples
@@ -177,6 +191,20 @@ pub enum StorageType {
     Table,
     /// Provides fast addition and removal of components, but slower iteration.
     SparseSet,
+}
+
+impl StorageType {
+    pub const fn is_referenceable(&self) -> bool {
+        match self {
+            StorageType::Table | StorageType::SparseSet => true,
+        }
+    }
+
+    pub const fn tracks_changes(&self) -> bool {
+        match self {
+            StorageType::Table | StorageType::SparseSet => true,
+        }
+    }
 }
 
 /// The type used for [`Component`] lifecycle hooks such as `on_add`, `on_insert` or `on_remove`

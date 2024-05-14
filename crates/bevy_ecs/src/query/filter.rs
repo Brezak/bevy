@@ -1,10 +1,10 @@
 use crate::{
-    archetype::Archetype,
-    component::{Component, ComponentId, StorageType, Tick},
-    entity::Entity,
-    query::{DebugCheckedUnwrap, FilteredAccess, WorldQuery},
-    storage::{Column, ComponentSparseSet, Table, TableRow},
-    world::{unsafe_world_cell::UnsafeWorldCell, World},
+     archetype::Archetype,
+    component::{Component, ChangeTrackingComponent, ComponentId, StorageType, Tick},
+     entity::Entity,
+     query::{DebugCheckedUnwrap, FilteredAccess, WorldQuery},
+     storage::{Column, ComponentSparseSet, Table, TableRow},
+     world::{unsafe_world_cell::UnsafeWorldCell, World},
 };
 use bevy_ptr::{ThinSlicePtr, UnsafeCellDeref};
 use bevy_utils::all_tuples;
@@ -592,7 +592,7 @@ pub struct AddedFetch<'w> {
 /// This is sound because `update_component_access` adds read access for that component and panics when appropriate.
 /// `update_component_access` adds a `With` filter for a component.
 /// This is sound because `matches_component_set` returns whether the set contains that component.
-unsafe impl<T: Component> WorldQuery for Added<T> {
+unsafe impl<T: ChangeTrackingComponent> WorldQuery for Added<T> {
     type Item<'w> = bool;
     type Fetch<'w> = AddedFetch<'w>;
     type State = ComponentId;
@@ -703,7 +703,7 @@ unsafe impl<T: Component> WorldQuery for Added<T> {
     }
 }
 
-impl<T: Component> QueryFilter for Added<T> {
+impl<T: ChangeTrackingComponent> QueryFilter for Added<T> {
     const IS_ARCHETYPAL: bool = false;
     #[inline(always)]
     unsafe fn filter_fetch(
@@ -801,7 +801,7 @@ pub struct ChangedFetch<'w> {
 /// This is sound because `update_component_access` add read access for that component and panics when appropriate.
 /// `update_component_access` adds a `With` filter for a component.
 /// This is sound because `matches_component_set` returns whether the set contains that component.
-unsafe impl<T: Component> WorldQuery for Changed<T> {
+unsafe impl<T: ChangeTrackingComponent> WorldQuery for Changed<T> {
     type Item<'w> = bool;
     type Fetch<'w> = ChangedFetch<'w>;
     type State = ComponentId;
@@ -912,7 +912,7 @@ unsafe impl<T: Component> WorldQuery for Changed<T> {
     }
 }
 
-impl<T: Component> QueryFilter for Changed<T> {
+impl<T: ChangeTrackingComponent> QueryFilter for Changed<T> {
     const IS_ARCHETYPAL: bool = false;
 
     #[inline(always)]

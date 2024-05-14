@@ -420,8 +420,8 @@ impl Plugin for PbrPlugin {
 }
 
 /// [`CameraProjection`] specific PBR functionality.
-pub struct PbrProjectionPlugin<T: CameraProjection + Component>(PhantomData<T>);
-impl<T: CameraProjection + Component> Plugin for PbrProjectionPlugin<T> {
+pub struct PbrProjectionPlugin<T: CameraProjection + ReferenceableComponent>(PhantomData<T>);
+impl<T: CameraProjection + ReferenceableComponent> Plugin for PbrProjectionPlugin<T> {
     fn build(&self, app: &mut App) {
         app.add_systems(
             PostUpdate,
@@ -431,7 +431,7 @@ impl<T: CameraProjection + Component> Plugin for PbrProjectionPlugin<T> {
         );
     }
 }
-impl<T: CameraProjection + Component> Default for PbrProjectionPlugin<T> {
+impl<T: CameraProjection + ReferenceableComponent> Default for PbrProjectionPlugin<T> {
     fn default() -> Self {
         Self(Default::default())
     }

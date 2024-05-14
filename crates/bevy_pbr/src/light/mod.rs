@@ -303,7 +303,7 @@ pub fn clear_directional_light_cascades(mut lights: Query<(&DirectionalLight, &m
     }
 }
 
-pub fn build_directional_light_cascades<P: CameraProjection + Component>(
+pub fn build_directional_light_cascades<P: CameraProjection + ReferenceableComponent>(
     directional_light_shadow_map: Res<DirectionalLightShadowMap>,
     views: Query<(Entity, &GlobalTransform, &P, &Camera)>,
     mut lights: Query<(

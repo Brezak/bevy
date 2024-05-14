@@ -293,7 +293,7 @@ pub fn calculate_bounds(
 /// Updates [`Frustum`].
 ///
 /// This system is used in [`CameraProjectionPlugin`](crate::camera::CameraProjectionPlugin).
-pub fn update_frusta<T: Component + CameraProjection + Send + Sync + 'static>(
+pub fn update_frusta<T: ReferenceableComponent + ChangeTrackingComponent + CameraProjection + Send + Sync + 'static>(
     mut views: Query<
         (&GlobalTransform, &T, &mut Frustum),
         Or<(Changed<GlobalTransform>, Changed<T>)>,

@@ -5,7 +5,7 @@ use crate::{
     component::ComponentId,
     entity::Entity,
     event::{Event, EventId, Events, SendBatchIds},
-    prelude::{Component, QueryState},
+    prelude::{ChangeTrackingComponent, QueryState, ReferenceableComponent},
     query::{QueryData, QueryFilter},
     system::{Commands, Query, Resource},
 };
@@ -63,7 +63,7 @@ impl<'w> DeferredWorld<'w> {
     /// Retrieves a mutable reference to the given `entity`'s [`Component`] of the given type.
     /// Returns `None` if the `entity` does not have a [`Component`] of the given type.
     #[inline]
-    pub fn get_mut<T: Component>(&mut self, entity: Entity) -> Option<Mut<T>> {
+    pub fn get_mut<T: ReferenceableComponent + ChangeTrackingComponent>(&mut self, entity: Entity) -> Option<Mut<T>> {
         // SAFETY: &mut self ensure that there are no outstanding accesses to the component
         unsafe { self.world.get_entity(entity)?.get_mut() }
     }

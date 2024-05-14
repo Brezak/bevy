@@ -9,7 +9,7 @@ use crate::{
     change_detection::{MutUntyped, Ticks, TicksMut},
     component::{ComponentId, ComponentTicks, Components, StorageType, Tick, TickCells},
     entity::{Entities, Entity, EntityLocation},
-    prelude::Component,
+    prelude::{ChangeTrackingComponent, Component, ReferenceableComponent},
     removal_detection::RemovedComponentEvents,
     storage::{Column, ComponentSparseSet, Storages},
     system::{Res, Resource},
@@ -671,7 +671,7 @@ impl<'w> UnsafeEntityCell<'w> {
     /// - the [`UnsafeEntityCell`] has permission to access the component
     /// - no other mutable references to the component exist at the same time
     #[inline]
-    pub unsafe fn get<T: Component>(self) -> Option<&'w T> {
+    pub unsafe fn get<T: ReferenceableComponent>(self) -> Option<&'w T> {
         let component_id = self.world.components().get_id(TypeId::of::<T>())?;
         // SAFETY:
         // - `storage_type` is correct (T component_id + T::STORAGE_TYPE)
@@ -695,7 +695,7 @@ impl<'w> UnsafeEntityCell<'w> {
     /// - the [`UnsafeEntityCell`] has permission to access the component
     /// - no other mutable references to the component exist at the same time
     #[inline]
-    pub unsafe fn get_ref<T: Component>(self) -> Option<Ref<'w, T>> {
+    pub unsafe fn get_ref<T: ReferenceableComponent>(self) -> Option<Ref<'w, T>> {
         let last_change_tick = self.world.last_change_tick();
         let change_tick = self.world.change_tick();
         let component_id = self.world.components().get_id(TypeId::of::<T>())?;
@@ -728,7 +728,7 @@ impl<'w> UnsafeEntityCell<'w> {
     /// - the [`UnsafeEntityCell`] has permission to access the component
     /// - no other mutable references to the component exist at the same time
     #[inline]
-    pub unsafe fn get_change_ticks<T: Component>(self) -> Option<ComponentTicks> {
+    pub unsafe fn get_change_ticks<T: ChangeTrackingComponent>(self) -> Option<ComponentTicks> {
         let component_id = self.world.components().get_id(TypeId::of::<T>())?;
 
         // SAFETY:
@@ -782,7 +782,7 @@ impl<'w> UnsafeEntityCell<'w> {
     /// - the [`UnsafeEntityCell`] has permission to access the component mutably
     /// - no other references to the component exist at the same time
     #[inline]
-    pub unsafe fn get_mut<T: Component>(self) -> Option<Mut<'w, T>> {
+    pub unsafe fn get_mut<T: ReferenceableComponent>(self) -> Option<Mut<'w, T>> {
         // SAFETY: same safety requirements
         unsafe { self.get_mut_using_ticks(self.world.last_change_tick(), self.world.change_tick()) }
     }
@@ -792,7 +792,7 @@ impl<'w> UnsafeEntityCell<'w> {
     /// - the [`UnsafeEntityCell`] has permission to access the component mutably
     /// - no other references to the component exist at the same time
     #[inline]
-    pub(crate) unsafe fn get_mut_using_ticks<T: Component>(
+    pub(crate) unsafe fn get_mut_using_ticks<T: ReferenceableComponent>(
         &self,
         last_change_tick: Tick,
         change_tick: Tick,

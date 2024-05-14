@@ -52,7 +52,7 @@ impl<T> Default for ReportHierarchyIssue<T> {
 /// This means that entities with one of those component
 /// and a parent without the same component is probably a programming error.
 /// (See B0004 explanation linked in warning message)
-pub fn check_hierarchy_component_has_valid_parent<T: Component>(
+pub fn check_hierarchy_component_has_valid_parent<T: ChangeTrackingComponent>(
     parent_query: Query<
         (Entity, &Parent, Option<&bevy_core::Name>),
         (With<T>, Or<(Changed<Parent>, Added<T>)>),
@@ -94,7 +94,7 @@ impl<T: Component> Default for ValidParentCheckPlugin<T> {
 }
 
 #[cfg(feature = "bevy_app")]
-impl<T: Component> bevy_app::Plugin for ValidParentCheckPlugin<T> {
+impl<T: ChangeTrackingComponent> bevy_app::Plugin for ValidParentCheckPlugin<T> {
     fn build(&self, app: &mut bevy_app::App) {
         app.init_resource::<ReportHierarchyIssue<T>>().add_systems(
             bevy_app::Last,

@@ -1,7 +1,5 @@
 use crate::{
-    component::Component,
-    entity::{Entity, EntityHashMap, MapEntities, SceneEntityMapper},
-    world::World,
+    entity::{Entity, EntityHashMap, MapEntities, SceneEntityMapper}, prelude::{ChangeTrackingComponent, ReferenceableComponent}, world::World
 };
 use bevy_reflect::FromType;
 
@@ -48,7 +46,7 @@ impl ReflectMapEntities {
     }
 }
 
-impl<C: Component + MapEntities> FromType<C> for ReflectMapEntities {
+impl<C: ReferenceableComponent + ChangeTrackingComponent + MapEntities> FromType<C> for ReflectMapEntities {
     fn from_type() -> Self {
         ReflectMapEntities {
             map_entities: |world, entity_mapper, entities| {

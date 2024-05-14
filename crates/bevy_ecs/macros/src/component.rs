@@ -57,11 +57,31 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
 
     let struct_name = &ast.ident;
     let (impl_generics, type_generics, where_clause) = &ast.generics.split_for_impl();
+    let (impl_referenceable, impl_change_detecting) = component_capabilities(attrs.storage);
+
+    let referenceable_impl = if impl_referenceable {
+        quote! {
+            unsafe impl #impl_generics #bevy_ecs_path::component::ReferenceableComponent for #struct_name #type_generics #where_clause {}
+        }
+    } else {
+        quote!()
+    };
+
+    let change_detecting_impl = if impl_change_detecting {
+        quote! {
+            unsafe impl #impl_generics #bevy_ecs_path::component::ChangeTrackingComponent for #struct_name #type_generics #where_clause {}
+        }
+    } else {
+        quote!()
+    };
 
     TokenStream::from(quote! {
         impl #impl_generics #bevy_ecs_path::component::Component for #struct_name #type_generics #where_clause {
             const STORAGE_TYPE: #bevy_ecs_path::component::StorageType = #storage;
         }
+
+        #referenceable_impl
+        #change_detecting_impl
     })
 }
 
@@ -116,4 +136,10 @@ fn storage_path(bevy_ecs_path: &Path, ty: StorageTy) -> TokenStream2 {
     };
 
     quote! { #bevy_ecs_path::component::StorageType::#storage_type }
+}
+
+fn component_capabilities(component_storage: StorageTy) -> (bool, bool) {
+    match component_storage {
+        StorageTy::Table | StorageTy::SparseSet => (true, true)
+    }
 }

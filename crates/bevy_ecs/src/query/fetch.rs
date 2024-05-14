@@ -1,7 +1,9 @@
 use crate::{
     archetype::{Archetype, Archetypes},
     change_detection::{Ticks, TicksMut},
-    component::{Component, ComponentId, StorageType, Tick},
+    component::{
+        ChangeTrackingComponent, Component, ComponentId, ReferenceableComponent, StorageType, Tick,
+    },
     entity::{Entities, Entity, EntityLocation},
     query::{Access, DebugCheckedUnwrap, FilteredAccess, WorldQuery},
     storage::{ComponentSparseSet, Table, TableRow},
@@ -884,7 +886,7 @@ impl<T> Copy for ReadFetch<'_, T> {}
 /// This is sound because `update_component_access` and `update_archetype_component_access` add read access for that component and panic when appropriate.
 /// `update_component_access` adds a `With` filter for a component.
 /// This is sound because `matches_component_set` returns whether the set contains that component.
-unsafe impl<T: Component> WorldQuery for &T {
+unsafe impl<T: ReferenceableComponent> WorldQuery for &T {
     type Item<'w> = &'w T;
     type Fetch<'w> = ReadFetch<'w, T>;
     type State = ComponentId;
@@ -1008,12 +1010,12 @@ unsafe impl<T: Component> WorldQuery for &T {
 }
 
 /// SAFETY: `Self` is the same as `Self::ReadOnly`
-unsafe impl<T: Component> QueryData for &T {
+unsafe impl<T: ReferenceableComponent> QueryData for &T {
     type ReadOnly = Self;
 }
 
 /// SAFETY: access is read only
-unsafe impl<T: Component> ReadOnlyQueryData for &T {}
+unsafe impl<T: ReferenceableComponent> ReadOnlyQueryData for &T {}
 
 #[doc(hidden)]
 pub struct RefFetch<'w, T> {
@@ -1042,7 +1044,7 @@ impl<T> Copy for RefFetch<'_, T> {}
 /// This is sound because `update_component_access` and `update_archetype_component_access` add read access for that component and panic when appropriate.
 /// `update_component_access` adds a `With` filter for a component.
 /// This is sound because `matches_component_set` returns whether the set contains that component.
-unsafe impl<'__w, T: Component> WorldQuery for Ref<'__w, T> {
+unsafe impl<'__w, T: ReferenceableComponent + ChangeTrackingComponent> WorldQuery for Ref<'__w, T> {
     type Item<'w> = Ref<'w, T>;
     type Fetch<'w> = RefFetch<'w, T>;
     type State = ComponentId;
@@ -1191,12 +1193,15 @@ unsafe impl<'__w, T: Component> WorldQuery for Ref<'__w, T> {
 }
 
 /// SAFETY: `Self` is the same as `Self::ReadOnly`
-unsafe impl<'__w, T: Component> QueryData for Ref<'__w, T> {
+unsafe impl<'__w, T: ReferenceableComponent + ChangeTrackingComponent> QueryData for Ref<'__w, T> {
     type ReadOnly = Self;
 }
 
 /// SAFETY: access is read only
-unsafe impl<'__w, T: Component> ReadOnlyQueryData for Ref<'__w, T> {}
+unsafe impl<'__w, T: ReferenceableComponent + ChangeTrackingComponent> ReadOnlyQueryData
+    for Ref<'__w, T>
+{
+}
 
 #[doc(hidden)]
 pub struct WriteFetch<'w, T> {
@@ -1225,7 +1230,7 @@ impl<T> Copy for WriteFetch<'_, T> {}
 /// This is sound because `update_component_access` and `update_archetype_component_access` add write access for that component and panic when appropriate.
 /// `update_component_access` adds a `With` filter for a component.
 /// This is sound because `matches_component_set` returns whether the set contains that component.
-unsafe impl<'__w, T: Component> WorldQuery for &'__w mut T {
+unsafe impl<'__w, T: ReferenceableComponent + ChangeTrackingComponent> WorldQuery for &'__w mut T {
     type Item<'w> = Mut<'w, T>;
     type Fetch<'w> = WriteFetch<'w, T>;
     type State = ComponentId;
@@ -1374,7 +1379,7 @@ unsafe impl<'__w, T: Component> WorldQuery for &'__w mut T {
 }
 
 /// SAFETY: access of `&T` is a subset of `&mut T`
-unsafe impl<'__w, T: Component> QueryData for &'__w mut T {
+unsafe impl<'__w, T: ReferenceableComponent + ChangeTrackingComponent> QueryData for &'__w mut T {
     type ReadOnly = &'__w T;
 }
 
