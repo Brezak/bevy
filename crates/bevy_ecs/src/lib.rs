@@ -65,7 +65,7 @@ pub mod prelude {
 #[cfg(test)]
 mod tests {
     use crate as bevy_ecs;
-    use crate::prelude::Or;
+    use crate::prelude::{ChangeTrackingComponent, Or};
     use crate::{
         bundle::Bundle,
         change_detection::Ref,
@@ -125,18 +125,25 @@ mod tests {
     #[component(storage = "SparseSet")]
     struct SparseStored(u32);
 
+    #[derive(Component, Copy, Clone, PartialEq, Eq, Debug)]
+    #[component(storage = "Archetypal")]
+    struct ArchetypeStored;
+
     #[test]
     fn random_access() {
         let mut world = World::new();
 
         let e = world.spawn((TableStored("abc"), SparseStored(123))).id();
         let f = world
-            .spawn((TableStored("def"), SparseStored(456), A(1)))
+            .spawn((TableStored("def"), SparseStored(456), A(1), ArchetypeStored))
             .id();
         assert_eq!(world.get::<TableStored>(e).unwrap().0, "abc");
         assert_eq!(world.get::<SparseStored>(e).unwrap().0, 123);
         assert_eq!(world.get::<TableStored>(f).unwrap().0, "def");
         assert_eq!(world.get::<SparseStored>(f).unwrap().0, 456);
+
+        assert!(!world.entity(e).contains::<ArchetypeStored>());
+        assert!(world.entity(f).contains::<ArchetypeStored>());
 
         // test archetype get_mut()
         world.get_mut::<TableStored>(e).unwrap().0 = "xyz";
@@ -328,11 +335,11 @@ mod tests {
     #[test]
     fn query_all() {
         let mut world = World::new();
-        let e = world.spawn((TableStored("abc"), A(123))).id();
-        let f = world.spawn((TableStored("def"), A(456))).id();
+        let e = world.spawn((TableStored("abc"), A(123), ArchetypeStored)).id();
+        let f = world.spawn((TableStored("def"), A(456), ArchetypeStored)).id();
 
         let ents = world
-            .query::<(Entity, &A, &TableStored)>()
+            .query_filtered::<(Entity, &A, &TableStored), With<ArchetypeStored>>()
             .iter(&world)
             .map(|(e, &i, &s)| (e, i, s))
             .collect::<Vec<_>>();
@@ -877,7 +884,7 @@ mod tests {
         let mut world = World::default();
         let e1 = world.spawn(A(0)).id();
 
-        fn get_added<Com: Component>(world: &mut World) -> Vec<Entity> {
+        fn get_added<Com: ChangeTrackingComponent>(world: &mut World) -> Vec<Entity> {
             world
                 .query_filtered::<Entity, Added<Com>>()
                 .iter(world)

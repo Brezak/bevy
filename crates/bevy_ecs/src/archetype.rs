@@ -339,11 +339,13 @@ impl Archetype {
         table_id: TableId,
         table_components: impl Iterator<Item = (ComponentId, ArchetypeComponentId)>,
         sparse_set_components: impl Iterator<Item = (ComponentId, ArchetypeComponentId)>,
+        archetypal_components: impl Iterator<Item = (ComponentId, ArchetypeComponentId)>,
     ) -> Self {
         let (min_table, _) = table_components.size_hint();
         let (min_sparse, _) = sparse_set_components.size_hint();
+        let (min_archetypal, _) = archetypal_components.size_hint();
         let mut flags = ArchetypeFlags::empty();
-        let mut archetype_components = SparseSet::with_capacity(min_table + min_sparse);
+        let mut archetype_components = SparseSet::with_capacity(min_table + min_sparse + min_archetypal);
         for (component_id, archetype_component_id) in table_components {
             // SAFETY: We are creating an archetype that includes this component so it must exist
             let info = unsafe { components.get_info_unchecked(component_id) };
@@ -369,6 +371,17 @@ impl Archetype {
                 },
             );
         }
+
+        for (component_id, archetype_component_id) in archetypal_components {
+            // SAFETY: We are creating an archetype that includes this component so it must exist
+            let info = unsafe { components.get_info_unchecked(component_id) };
+            info.update_archetype_flags(&mut flags);
+            archetype_components.insert(component_id, ArchetypeComponentInfo {
+                storage_type: StorageType::Archetypal,
+                archetype_component_id,
+            });
+        }
+
         Self {
             id,
             table_id,
@@ -412,10 +425,9 @@ impl Archetype {
     /// [`Table`]: crate::storage::Table
     #[inline]
     pub fn table_components(&self) -> impl Iterator<Item = ComponentId> + '_ {
-        self.components
-            .iter()
-            .filter(|(_, component)| component.storage_type == StorageType::Table)
-            .map(|(id, _)| *id)
+        self.components.iter().filter_map(|(id, component)| {
+            (component.storage_type == StorageType::Table).then_some(*id)
+        })
     }
 
     /// Gets an iterator of all of the components stored in [`ComponentSparseSet`]s.
@@ -425,10 +437,18 @@ impl Archetype {
     /// [`ComponentSparseSet`]: crate::storage::ComponentSparseSet
     #[inline]
     pub fn sparse_set_components(&self) -> impl Iterator<Item = ComponentId> + '_ {
-        self.components
-            .iter()
-            .filter(|(_, component)| component.storage_type == StorageType::SparseSet)
-            .map(|(id, _)| *id)
+        self.components.iter().filter_map(|(id, component)| {
+            (component.storage_type == StorageType::SparseSet).then_some(*id)
+        })
+    }
+
+    /// Gets an iterator of all of the components stored in [`Archetype`]s.
+    ///
+    /// All of the IDs are unique.
+    pub fn archetypal_components(&self) -> impl Iterator<Item = ComponentId> + '_ {
+        self.components.iter().filter_map(|(id, component)| {
+            (component.storage_type == StorageType::Archetypal).then_some(*id)
+        })
     }
 
     /// Gets an iterator of all of the components in the archetype.
@@ -616,6 +636,7 @@ impl ArchetypeGeneration {
 struct ArchetypeComponents {
     table_components: Box<[ComponentId]>,
     sparse_set_components: Box<[ComponentId]>,
+    archetypal_components: Box<[ComponentId]>,
 }
 
 /// An opaque unique joint ID for a [`Component`] in an [`Archetype`] within a [`World`].
@@ -682,6 +703,7 @@ impl Archetypes {
             archetypes.get_id_or_insert(
                 &Components::default(),
                 TableId::empty(),
+                Vec::new(),
                 Vec::new(),
                 Vec::new(),
             );
@@ -774,7 +796,7 @@ impl Archetypes {
     }
 
     /// Gets the archetype id matching the given inputs or inserts a new one if it doesn't exist.
-    /// `table_components` and `sparse_set_components` must be sorted
+    /// `table_components` `sparse_set_components` and `archetypal_components` must be sorted
     ///
     /// # Safety
     /// [`TableId`] must exist in tables
@@ -785,10 +807,12 @@ impl Archetypes {
         table_id: TableId,
         table_components: Vec<ComponentId>,
         sparse_set_components: Vec<ComponentId>,
+        archetypal_components: Vec<ComponentId>,
     ) -> ArchetypeId {
         let archetype_identity = ArchetypeComponents {
             sparse_set_components: sparse_set_components.clone().into_boxed_slice(),
             table_components: table_components.clone().into_boxed_slice(),
+            archetypal_components: archetypal_components.clone().into_boxed_slice(),
         };
 
         let archetypes = &mut self.archetypes;
@@ -798,14 +822,22 @@ impl Archetypes {
             .entry(archetype_identity)
             .or_insert_with(move || {
                 let id = ArchetypeId::new(archetypes.len());
+                
                 let table_start = *archetype_component_count;
                 *archetype_component_count += table_components.len();
                 let table_archetype_components =
                     (table_start..*archetype_component_count).map(ArchetypeComponentId);
+                
                 let sparse_start = *archetype_component_count;
                 *archetype_component_count += sparse_set_components.len();
                 let sparse_set_archetype_components =
                     (sparse_start..*archetype_component_count).map(ArchetypeComponentId);
+
+                let archetypal_start = *archetype_component_count;
+                *archetype_component_count += archetypal_components.len();
+                let archetypal_archetype_components =
+                    (archetypal_start..*archetype_component_count).map(ArchetypeComponentId);
+                
                 archetypes.push(Archetype::new(
                     components,
                     id,
@@ -814,6 +846,9 @@ impl Archetypes {
                     sparse_set_components
                         .into_iter()
                         .zip(sparse_set_archetype_components),
+                    archetypal_components
+                        .into_iter()
+                        .zip(archetypal_archetype_components)
                 ));
                 id
             })

@@ -2293,8 +2293,10 @@ unsafe fn remove_bundle_from_archetype(
         // this Bundle removal result is cached. just return that!
         result
     } else {
+
         let mut next_table_components;
         let mut next_sparse_set_components;
+        let mut next_archetypal_components;
         let next_table_id;
         {
             let current_archetype = &mut archetypes[archetype_id];
@@ -2325,12 +2327,18 @@ unsafe fn remove_bundle_from_archetype(
             // components are already sorted
             removed_table_components.sort();
             removed_sparse_set_components.sort();
+            removed_archetypal_components.sort_unstable();
             next_table_components = current_archetype.table_components().collect();
             next_sparse_set_components = current_archetype.sparse_set_components().collect();
+            next_archetypal_components = current_archetype.archetypal_components().collect();
             sorted_remove(&mut next_table_components, &removed_table_components);
             sorted_remove(
                 &mut next_sparse_set_components,
                 &removed_sparse_set_components,
+            );
+            sorted_remove(
+                &mut next_archetypal_components, 
+                &removed_archetypal_components
             );
 
             next_table_id = if removed_table_components.is_empty() {
@@ -2350,6 +2358,7 @@ unsafe fn remove_bundle_from_archetype(
             next_table_id,
             next_table_components,
             next_sparse_set_components,
+            next_archetypal_components,
         );
         Some(new_archetype_id)
     };

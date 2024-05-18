@@ -413,7 +413,7 @@ impl BundleInfo {
                     sparse_set.insert(entity, component_ptr, change_tick);
                 }
                 StorageType::Archetypal => {
-                    // All archetypal components are ZSTs and are not storred anywhere.
+                    // All archetypal components are not stored anywhere.
                 },
             }
             bundle_component += 1;
@@ -437,7 +437,7 @@ impl BundleInfo {
         }
         let mut new_table_components = Vec::new();
         let mut new_sparse_set_components = Vec::new();
-        let mut new_archetypal_components: Vec<ComponentId> = Vec::new();
+        let mut new_archetypal_components = Vec::new();
         let mut bundle_status = Vec::with_capacity(self.component_ids.len());
 
         let current_archetype = &mut archetypes[archetype_id];
@@ -456,7 +456,7 @@ impl BundleInfo {
             }
         }
 
-        if new_table_components.is_empty() && new_sparse_set_components.is_empty() {
+        if new_table_components.is_empty() && new_sparse_set_components.is_empty() && new_archetypal_components.is_empty() {
             let edges = current_archetype.edges_mut();
             // the archetype does not change when we add this bundle
             edges.insert_add_bundle(self.id, archetype_id, bundle_status);
@@ -465,6 +465,7 @@ impl BundleInfo {
             let table_id;
             let table_components;
             let sparse_set_components;
+            let archetypal_components;
             // the archetype changes when we add this bundle. prepare the new archetype and storages
             {
                 let current_archetype = &archetypes[archetype_id];
@@ -494,6 +495,14 @@ impl BundleInfo {
                     new_sparse_set_components.sort();
                     new_sparse_set_components
                 };
+
+                archetypal_components = if new_archetypal_components.is_empty() {
+                    current_archetype.archetypal_components().collect()
+                } else {
+                    // sort to ignore order while hashing
+                    new_archetypal_components.sort_unstable();
+                    new_archetypal_components
+                }
             };
             // SAFETY: ids in self must be valid
             let new_archetype_id = archetypes.get_id_or_insert(
@@ -501,6 +510,7 @@ impl BundleInfo {
                 table_id,
                 table_components,
                 sparse_set_components,
+                archetypal_components,
             );
             // add an edge from the old archetype to the new archetype
             archetypes[archetype_id].edges_mut().insert_add_bundle(

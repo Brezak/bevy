@@ -48,6 +48,10 @@ fn main() {
         .run();
 }
 
+#[derive(Component)]
+#[component(storage = "Archetypal")]
+struct SpriteMarker;
+
 fn setup(
     mut commands: Commands,
     assets: Res<AssetServer>,
@@ -97,6 +101,7 @@ fn setup(
                 },
                 TextureAtlas::from(texture_atlas_handle.clone()),
                 AnimationTimer(timer),
+                SpriteMarker,
             ));
         }
     }
@@ -116,7 +121,7 @@ struct AnimationTimer(Timer);
 fn animate_sprite(
     time: Res<Time>,
     texture_atlases: Res<Assets<TextureAtlasLayout>>,
-    mut query: Query<(&mut AnimationTimer, &mut TextureAtlas)>,
+    mut query: Query<(&mut AnimationTimer, &mut TextureAtlas), With<SpriteMarker>>,
 ) {
     for (mut timer, mut sheet) in query.iter_mut() {
         timer.tick(time.delta());

@@ -96,11 +96,13 @@ struct Attrs {
 enum StorageTy {
     Table,
     SparseSet,
+    Archetypal,
 }
 
 // values for `storage` attribute
 const TABLE: &str = "Table";
 const SPARSE_SET: &str = "SparseSet";
+const ARCHETYPAL: &str = "Archetypal";
 
 fn parse_component_attr(ast: &DeriveInput) -> Result<Attrs> {
     let mut attrs = Attrs {
@@ -113,9 +115,10 @@ fn parse_component_attr(ast: &DeriveInput) -> Result<Attrs> {
                 attrs.storage = match nested.value()?.parse::<LitStr>()?.value() {
                     s if s == TABLE => StorageTy::Table,
                     s if s == SPARSE_SET => StorageTy::SparseSet,
+                    s if s == ARCHETYPAL => StorageTy::Archetypal,
                     s => {
                         return Err(nested.error(format!(
-                            "Invalid storage type `{s}`, expected '{TABLE}' or '{SPARSE_SET}'.",
+                            "Invalid storage type `{s}`, expected '{TABLE}', '{SPARSE_SET}' or '{ARCHETYPAL}'.",
                         )));
                     }
                 };
@@ -133,6 +136,7 @@ fn storage_path(bevy_ecs_path: &Path, ty: StorageTy) -> TokenStream2 {
     let storage_type = match ty {
         StorageTy::Table => Ident::new("Table", Span::call_site()),
         StorageTy::SparseSet => Ident::new("SparseSet", Span::call_site()),
+        StorageTy::Archetypal => Ident::new("Archetypal", Span::call_site()),
     };
 
     quote! { #bevy_ecs_path::component::StorageType::#storage_type }
@@ -140,6 +144,7 @@ fn storage_path(bevy_ecs_path: &Path, ty: StorageTy) -> TokenStream2 {
 
 fn component_capabilities(component_storage: StorageTy) -> (bool, bool) {
     match component_storage {
-        StorageTy::Table | StorageTy::SparseSet => (true, true)
+        StorageTy::Table | StorageTy::SparseSet => (true, true),
+        StorageTy::Archetypal => (false, false),
     }
 }

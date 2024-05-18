@@ -2045,7 +2045,7 @@ mod tests {
             pub fetch: &'static ClientFetch,
         }
 
-        pub trait ClientState: Component {}
+        pub trait ClientState: ReferenceableComponent {}
 
         #[derive(Component)]
         pub struct ClientFetch;
