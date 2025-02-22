@@ -6,7 +6,7 @@ use crate::{
     world::{EntityWorldMut, World},
 };
 use alloc::vec::Vec;
-use core::marker::PhantomData;
+use core::{borrow::Borrow, marker::PhantomData};
 
 impl<'w> EntityWorldMut<'w> {
     /// Spawns entities related to this entity (with the `R` relationship) by taking a function that operates on a [`RelatedSpawner`].
@@ -22,11 +22,14 @@ impl<'w> EntityWorldMut<'w> {
     }
 
     /// Relates the given entities to this entity with the relation `R`
-    pub fn add_related<R: Relationship>(&mut self, related: &[Entity]) -> &mut Self {
+    pub fn add_related<R: Relationship>(
+        &mut self,
+        related: impl IntoIterator<Item = impl Borrow<Entity>>,
+    ) -> &mut Self {
         let id = self.id();
         self.world_scope(|world| {
             for related in related {
-                world.entity_mut(*related).insert(R::from(id));
+                world.entity_mut(*related.borrow()).insert(R::from(id));
             }
         });
         self
@@ -114,9 +117,12 @@ impl<'a> EntityCommands<'a> {
     }
 
     /// Relates the given entities to this entity with the relation `R`
-    pub fn add_related<R: Relationship>(&mut self, related: &[Entity]) -> &mut Self {
+    pub fn add_related<R: Relationship>(
+        &mut self,
+        related: impl IntoIterator<Item = impl Borrow<Entity>>,
+    ) -> &mut Self {
         let id = self.id();
-        let related = related.to_vec();
+        let related: Vec<Entity> = related.into_iter().map(|a| *a.borrow()).collect();
         self.commands().queue(move |world: &mut World| {
             for related in related {
                 world.entity_mut(related).insert(R::from(id));
