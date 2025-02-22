@@ -32,6 +32,11 @@ impl<'w> EntityWorldMut<'w> {
         self
     }
 
+    /// Relates the given entity to this with the relation `R`
+    pub fn add_one_related<R: Relationship>(&mut self, entity: Entity) -> &mut Self {
+        self.add_related::<R>(&[entity])
+    }
+
     /// Despawns entities that relate to this one via the given [`RelationshipTarget`].
     /// This entity will not be despawned.
     pub fn despawn_related<S: RelationshipTarget>(&mut self) -> &mut Self {
@@ -118,6 +123,11 @@ impl<'a> EntityCommands<'a> {
             }
         });
         self
+    }
+
+    /// Relates the given entity to this with the relation `R`
+    pub fn add_one_related<R: Relationship>(&mut self, entity: Entity) -> &mut Self {
+        self.add_related::<R>(&[entity])
     }
 
     /// Despawns entities that relate to this one via the given [`RelationshipTarget`].
