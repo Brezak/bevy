@@ -10,6 +10,8 @@ use alloc::{collections::VecDeque, vec::Vec};
 use bevy_platform_support::collections::HashSet;
 use smallvec::SmallVec;
 
+use super::hash_set::EntityHashSet;
+
 /// Operation to map all contained [`Entity`] fields in a type to new values.
 ///
 /// As entity IDs are valid only for the [`World`] they're sourced from, using [`Entity`]
@@ -74,6 +76,16 @@ impl MapEntities for HashSet<Entity> {
             .collect::<HashSet<_>>();
     }
 }
+
+impl MapEntities for EntityHashSet {
+    fn map_entities<E: EntityMapper>(&mut self, entity_mapper: &mut E) {
+        *self = self
+            .drain()
+            .map(|e| entity_mapper.get_mapped(e))
+            .collect::<EntityHashSet>();
+    }
+}
+
 impl MapEntities for Vec<Entity> {
     fn map_entities<E: EntityMapper>(&mut self, entity_mapper: &mut E) {
         for entity in self.iter_mut() {
@@ -122,7 +134,7 @@ impl<A: smallvec::Array<Item = Entity>> MapEntities for SmallVec<A> {
 ///     fn get_mapped(&mut self, entity: Entity) -> Entity {
 ///         self.map.get(&entity).copied().unwrap_or(entity)
 ///     }
-///     
+///
 ///     fn set_mapped(&mut self, source: Entity, target: Entity) {
 ///         self.map.insert(source, target);
 ///     }

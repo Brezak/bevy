@@ -334,6 +334,7 @@ pub enum RelationshipHookMode {
 
 #[cfg(test)]
 mod tests {
+    use crate::entity::hash_set::EntityHashSet;
     use crate::world::World;
     use crate::{component::Component, entity::Entity};
     use alloc::vec::Vec;
@@ -388,5 +389,26 @@ mod tests {
         let b = world.spawn(Rel(a)).id();
         assert!(!world.entity(b).contains::<Rel>());
         assert!(!world.entity(b).contains::<RelTarget>());
+    }
+
+    #[test]
+    fn hashset_based_relationship() {
+        #[derive(Component)]
+        #[relationship(relationship_target = RelTarget)]
+        struct Rel(Entity);
+
+        #[derive(Component)]
+        #[relationship_target(relationship = Rel)]
+        struct RelTarget(EntityHashSet);
+
+        let mut world = World::new();
+        let a = world.spawn_empty().id();
+        let b = world.spawn(Rel(a)).id();
+        let c = world.spawn(Rel(a)).id();
+
+        assert_eq!(
+            world.entity(a).get::<RelTarget>().unwrap().0,
+            EntityHashSet::from([b, c])
+        );
     }
 }
