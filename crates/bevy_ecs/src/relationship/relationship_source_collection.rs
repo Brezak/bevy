@@ -1,10 +1,10 @@
-use crate::entity::{hash_set::EntityHashSet, Entity};
+use crate::entity::{hash_set::EntityHashSet, Entity, MapEntities};
 use alloc::vec::Vec;
 use smallvec::SmallVec;
 
 /// The internal [`Entity`] collection used by a [`RelationshipTarget`](crate::relationship::RelationshipTarget) component.
 /// This is not intended to be modified directly by users, as it could invalidate the correctness of relationships.
-pub trait RelationshipSourceCollection {
+pub trait RelationshipSourceCollection: MapEntities {
     /// The type of iterator returned by the `iter` method.
     ///
     /// This is an associated type (rather than using a method that returns an opaque return-position impl trait)
@@ -16,18 +16,8 @@ pub trait RelationshipSourceCollection {
     where
         Self: 'a;
 
-    /// Creates a new empty instance.
-    fn new() -> Self;
-
     /// Returns an instance with the given pre-allocated entity `capacity`.
-    ///
-    /// Some collections will ignore the provided `capacity` and return a default instance.
     fn with_capacity(capacity: usize) -> Self;
-
-    /// Reserves capacity for at least `additional` more entities to be inserted.
-    ///
-    /// Not all collections support this operation, in which case it is a no-op.
-    fn reserve(&mut self, additional: usize);
 
     /// Adds the given `entity` to the collection.
     ///
@@ -51,11 +41,6 @@ pub trait RelationshipSourceCollection {
     /// Clears the collection.
     fn clear(&mut self);
 
-    /// Attempts to save memory by shrinking the capacity to fit the current length.
-    ///
-    /// This operation is a no-op for collections that do not support it.
-    fn shrink_to_fit(&mut self);
-
     /// Returns true if the collection contains no entities.
     #[inline]
     fn is_empty(&self) -> bool {
@@ -76,14 +61,6 @@ pub trait RelationshipSourceCollection {
 
 impl RelationshipSourceCollection for Vec<Entity> {
     type SourceIter<'a> = core::iter::Copied<core::slice::Iter<'a, Entity>>;
-
-    fn new() -> Self {
-        Vec::new()
-    }
-
-    fn reserve(&mut self, additional: usize) {
-        Vec::reserve(self, additional);
-    }
 
     fn with_capacity(capacity: usize) -> Self {
         Vec::with_capacity(capacity)
@@ -117,10 +94,6 @@ impl RelationshipSourceCollection for Vec<Entity> {
         self.clear();
     }
 
-    fn shrink_to_fit(&mut self) {
-        Vec::shrink_to_fit(self);
-    }
-
     fn extend_from_iter(&mut self, entities: impl IntoIterator<Item = Entity>) {
         self.extend(entities);
     }
@@ -128,14 +101,6 @@ impl RelationshipSourceCollection for Vec<Entity> {
 
 impl RelationshipSourceCollection for EntityHashSet {
     type SourceIter<'a> = core::iter::Copied<crate::entity::hash_set::Iter<'a>>;
-
-    fn new() -> Self {
-        EntityHashSet::new()
-    }
-
-    fn reserve(&mut self, additional: usize) {
-        self.0.reserve(additional);
-    }
 
     fn with_capacity(capacity: usize) -> Self {
         EntityHashSet::with_capacity(capacity)
@@ -163,10 +128,6 @@ impl RelationshipSourceCollection for EntityHashSet {
         self.0.clear();
     }
 
-    fn shrink_to_fit(&mut self) {
-        self.0.shrink_to_fit();
-    }
-
     fn extend_from_iter(&mut self, entities: impl IntoIterator<Item = Entity>) {
         self.extend(entities);
     }
@@ -174,14 +135,6 @@ impl RelationshipSourceCollection for EntityHashSet {
 
 impl<const N: usize> RelationshipSourceCollection for SmallVec<[Entity; N]> {
     type SourceIter<'a> = core::iter::Copied<core::slice::Iter<'a, Entity>>;
-
-    fn new() -> Self {
-        SmallVec::new()
-    }
-
-    fn reserve(&mut self, additional: usize) {
-        SmallVec::reserve(self, additional);
-    }
 
     fn with_capacity(capacity: usize) -> Self {
         SmallVec::with_capacity(capacity)
@@ -215,10 +168,6 @@ impl<const N: usize> RelationshipSourceCollection for SmallVec<[Entity; N]> {
         self.clear();
     }
 
-    fn shrink_to_fit(&mut self) {
-        SmallVec::shrink_to_fit(self);
-    }
-
     fn extend_from_iter(&mut self, entities: impl IntoIterator<Item = Entity>) {
         self.extend(entities);
     }
@@ -227,14 +176,8 @@ impl<const N: usize> RelationshipSourceCollection for SmallVec<[Entity; N]> {
 impl RelationshipSourceCollection for Entity {
     type SourceIter<'a> = core::iter::Once<Entity>;
 
-    fn new() -> Self {
-        Entity::PLACEHOLDER
-    }
-
-    fn reserve(&mut self, _: usize) {}
-
     fn with_capacity(_capacity: usize) -> Self {
-        Self::new()
+        Entity::PLACEHOLDER
     }
 
     fn add(&mut self, entity: Entity) -> bool {
@@ -267,8 +210,6 @@ impl RelationshipSourceCollection for Entity {
     fn clear(&mut self) {
         *self = Entity::PLACEHOLDER;
     }
-
-    fn shrink_to_fit(&mut self) {}
 
     fn extend_from_iter(&mut self, entities: impl IntoIterator<Item = Entity>) {
         if let Some(entity) = entities.into_iter().last() {
